@@ -19,7 +19,7 @@ export function Sidebar({ alertCount = 0 }: { alertCount?: number }) {
   const path = usePathname();
 
   return (
-    <aside style={{ width: 220, minHeight: '100vh', background: '#00224D', borderRight: '1px solid #1e3358', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+    <aside style={{ width: 220, height: '100vh', background: '#00224D', borderRight: '1px solid #1e3358', display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
       {/* Logo */}
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #1e3358' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -64,6 +64,8 @@ async def create_record(body: CreateRecord, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{record_id}")
 async def update_record(record_id: int, body: UpdateRecord, db: AsyncSession = Depends(get_db)):
+    from app.simulation.engine import get_engine
+
     result = await db.execute(select(MaintenanceRecord).where(MaintenanceRecord.id == record_id))
     rec = result.scalar_one_or_none()
     if not rec:
@@ -73,9 +75,32 @@ async def update_record(record_id: int, body: UpdateRecord, db: AsyncSession = D
         valid_statuses = ("OPEN", "IN_PROGRESS", "COMPLETED")
         if body.status not in valid_statuses:
             raise HTTPException(status_code=400, detail=f"Status must be one of {valid_statuses}")
+
+        prev_status = rec.status
         rec.status = body.status
-        if body.status == "COMPLETED" and not rec.completed_at:
+
+        engine = get_engine()
+        machine_code = rec.machine_code
+        state = engine.machines.get(machine_code)
+
+        if body.status == "IN_PROGRESS" and prev_status != "IN_PROGRESS":
+            # Shut the machine down — set status OFFLINE and freeze sensors at 0
+            if state:
+                state.status = "OFFLINE"
+                state.fault_severity = 0.0
+
+        elif body.status == "COMPLETED" and not rec.completed_at:
             rec.completed_at = datetime.utcnow()
+            # Bring the machine back online at full health
+            if state:
+                from app.simulation.engine import FaultType
+                from app.simulation.engine import FaultModifiers
+                state.fault_type = FaultType.NORMAL
+                state.fault_severity = 0.0
+                state.manual_modifiers = FaultModifiers()
+                state.health_score = 100.0
+                state.status = "RUNNING"
+
     if body.notes is not None:
         rec.notes = body.notes
 

@@ -216,6 +216,16 @@ class SimulationEngine:
         now = datetime.utcnow()
 
         for code, state in self.machines.items():
+            # Skip sensor updates for machines undergoing maintenance
+            if state.status == "OFFLINE":
+                state.temperature = 0.0
+                state.vibration = 0.0
+                state.current = 0.0
+                state.rpm = 0.0
+                state.acoustic = 0.0
+                state.health_score = 0.0
+                continue
+
             state.tick_count += 1
             tick = state.tick_count
             b = state.baseline

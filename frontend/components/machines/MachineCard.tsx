@@ -10,31 +10,50 @@ interface Props {
 }
 
 export function MachineCard({ machine: m }: Props) {
-  const hc = healthColor(m.health_breakdown?.status ?? 'HEALTHY');
+  const offline = m.status === 'OFFLINE';
+  const hc = offline ? '#94a3b8' : healthColor(m.health_breakdown?.status ?? 'HEALTHY');
   const score = m.health_score;
   const fault = m.anomalies?.probable_fault ?? 'NORMAL';
 
   return (
     <Link href={`/machines/${m.machine_code}`} style={{ textDecoration: 'none' }}>
       <div style={{
-        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
-        padding: '18px 20px', cursor: 'pointer', transition: 'box-shadow 0.15s',
+        background: offline ? '#f1f5f9' : '#fff',
+        border: '1px solid #e2e8f0',
+        borderRadius: 10,
+        padding: '18px 20px',
+        cursor: 'pointer',
+        transition: 'box-shadow 0.15s',
         borderLeft: `4px solid ${hc}`,
+        opacity: offline ? 0.75 : 1,
+        position: 'relative',
       }}
-        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)')}
+        onMouseEnter={e => { if (!offline) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; }}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
       >
+        {/* Maintenance overlay banner */}
+        {offline && (
+          <div style={{
+            position: 'absolute', top: 10, right: 10,
+            background: '#475569', color: '#fff',
+            fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', borderRadius: 4, padding: '3px 8px',
+          }}>
+            Under Maintenance
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: '#FF204E', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: offline ? '#94a3b8' : '#FF204E', textTransform: 'uppercase' }}>
               {m.machine_code}
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{m.name}</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: offline ? '#64748b' : '#0f172a', marginTop: 2 }}>{m.name}</div>
             <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: 1 }}>{m.machine_type}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <StatusBadge status={m.health_breakdown?.status ?? m.status} />
+            <StatusBadge status={offline ? 'OFFLINE' : (m.health_breakdown?.status ?? m.status)} />
             <ChevronRight size={14} color="#94a3b8" />
           </div>
         </div>
@@ -43,10 +62,12 @@ export function MachineCard({ machine: m }: Props) {
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
             <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>Health Score</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 700, color: hc, fontSize: '0.85rem' }}>{score.toFixed(1)}%</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 700, color: hc, fontSize: '0.85rem' }}>
+              {offline ? '—' : `${score.toFixed(1)}%`}
+            </span>
           </div>
           <div style={{ height: 5, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${score}%`, background: hc, borderRadius: 3, transition: 'width 0.5s ease' }} />
+            <div style={{ height: '100%', width: offline ? '0%' : `${score}%`, background: hc, borderRadius: 3, transition: 'width 0.5s ease' }} />
           </div>
         </div>
 
@@ -59,17 +80,21 @@ export function MachineCard({ machine: m }: Props) {
             { l: 'RPM', v: m.sensors.rpm.toFixed(0), u: '' },
             { l: 'Acoustic', v: m.sensors.acoustic.toFixed(1), u: 'dB' },
           ].map(s => (
-            <div key={s.l} style={{ background: '#f8fafc', borderRadius: 5, padding: '6px 8px' }}>
+            <div key={s.l} style={{ background: offline ? '#e2e8f0' : '#f8fafc', borderRadius: 5, padding: '6px 8px' }}>
               <div style={{ fontSize: '0.55rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.l}</div>
-              <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', fontWeight: 600, color: '#1e293b', marginTop: 1 }}>
-                {s.v}{s.u && <span style={{ fontSize: '0.6rem', color: '#94a3b8', marginLeft: 1 }}>{s.u}</span>}
+              <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', fontWeight: 600, color: offline ? '#94a3b8' : '#1e293b', marginTop: 1 }}>
+                {offline ? '—' : s.v}{!offline && s.u && <span style={{ fontSize: '0.6rem', color: '#94a3b8', marginLeft: 1 }}>{s.u}</span>}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Active anomalies */}
-        {fault !== 'NORMAL' && (
+        {/* Active anomalies / maintenance note */}
+        {offline ? (
+          <div style={{ background: '#e2e8f0', border: '1px solid #cbd5e1', borderRadius: 5, padding: '6px 10px', fontSize: '0.68rem', color: '#475569' }}>
+            🔧 Machine offline — maintenance in progress
+          </div>
+        ) : fault !== 'NORMAL' && (
           <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 5, padding: '6px 10px', fontSize: '0.68rem', color: '#9a3412' }}>
             ⚠ {faultLabel(fault)}
           </div>

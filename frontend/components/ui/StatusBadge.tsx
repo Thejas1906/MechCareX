@@ -12,6 +12,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string; dot: string }> 
   DEGRADED: { bg: '#fff7ed', color: '#9a3412', dot: '#f97316' },
   CRITICAL: { bg: '#fef2f2', color: '#991b1b', dot: '#ef4444' },
   FAULT:    { bg: '#fdf2f8', color: '#7e1d5f', dot: '#a855f7' },
+  OFFLINE:  { bg: '#f1f5f9', color: '#475569', dot: '#94a3b8' },
 };
 
 export function StatusBadge({ status, size = 'sm' }: Props) {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RotaryGuard — Virtual Factory</title>
+  <title>MechCareX — Virtual Factory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -255,7 +255,7 @@
       <line x1="10.1" y1="21.9" x2="5.86" y2="26.14" stroke="#A0153E" stroke-width="1.5"/>
     </svg>
     <div>
-      <div class="logo-text">ROTARYGUARD</div>
+      <div class="logo-text">MechCareX</div>
       <div class="logo-sub">Virtual Industrial Environment</div>
     </div>
   </div>
@@ -269,12 +269,47 @@
 </header>
 
 <main>
-  <div class="page-title">Virtual Factory — Phase 1 Simulation Control Center &nbsp;/&nbsp; 3 machines online</div>
+  <!-- Circuit & Implementation -->
+  <section style="margin-bottom: 2.5rem;">
+    <button onclick="toggleCircuit()" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 0.75rem 1rem; background:var(--card); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:border-color 0.2s;" id="circuit-btn">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/>
+          <path d="M14 6h2a2 2 0 0 1 2 2v2"/><path d="M20 14v2a2 2 0 0 1-2 2h-2"/><path d="M6 14v6"/><path d="M10 17H2"/>
+        </svg>
+        <span style="font-size:0.7rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--text);">Circuit &amp; Implementation</span>
+      </div>
+      <svg id="circuit-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.25s; flex-shrink:0;">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+    <div id="circuit-panel" style="display:none; margin-top:8px; background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; padding:12px;">
+      <img
+        src="/static/circuit.png"
+        alt="MechCareX Common Circuit Diagram"
+        style="width:80%; max-width:900px; display:block; margin:0 auto; border-radius:8px;"
+      />
+    </div>
+  </section>
+  <script>
+    function toggleCircuit() {
+      const panel = document.getElementById('circuit-panel');
+      const chevron = document.getElementById('circuit-chevron');
+      const btn = document.getElementById('circuit-btn');
+      const open = panel.style.display === 'block';
+      panel.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+      btn.style.borderColor = open ? 'var(--border)' : 'var(--pink)';
+    }
+  </script>
+
+  <!-- Machines -->
+  <div class="page-title">Virtual Factory — Simulation Control Center &nbsp;/&nbsp; 3 machines online</div>
   <div class="machines-grid" id="machines-grid"></div>
 </main>
 
 <footer>
-  <span>RotaryGuard v1.0 — Phase 1 Prototype &nbsp;|&nbsp; IoT-Based Predictive Maintenance</span>
+  <span>MechCareX — Virtual Factory &nbsp;|&nbsp; IoT-Based Predictive Maintenance</span>
   <span id="last-update">Last update: —</span>
 </footer>
 

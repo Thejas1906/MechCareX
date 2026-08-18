@@ -52,6 +52,7 @@ export function severityColor(s: string): string {
 export function faultLabel(fault: string): string {
   const labels: Record<string, string> = {
     NORMAL: 'Normal',
+    BEARING_FAILURE: 'Bearing Failure',
     BEARING_DEGRADATION: 'Bearing Degradation',
     IMBALANCE: 'Mechanical Imbalance',
     MISALIGNMENT: 'Shaft Misalignment',

@@ -53,15 +53,17 @@ async def ws_broadcast_callback(machines: dict, now: datetime):
         )
 
         # Update engine's health_score with computed value
+        # Do NOT overwrite status when machine is manually set OFFLINE (under maintenance)
         state.health_score = breakdown.total
-        if breakdown.total >= 90:
-            state.status = "RUNNING"
-        elif breakdown.total >= 70:
-            state.status = "WARNING"
-        elif breakdown.total >= 40:
-            state.status = "DEGRADED"
-        else:
-            state.status = "CRITICAL"
+        if state.status != "OFFLINE":
+            if breakdown.total >= 90:
+                state.status = "RUNNING"
+            elif breakdown.total >= 70:
+                state.status = "WARNING"
+            elif breakdown.total >= 40:
+                state.status = "DEGRADED"
+            else:
+                state.status = "CRITICAL"
 
         # Anomaly detection
         anomaly_result = detect_anomalies(

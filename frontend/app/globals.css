@@ -23,9 +23,15 @@ body {
 
 a { text-decoration: none; color: inherit; }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-content {
@@ -33,12 +39,15 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .page-content {
   flex: 1;
   padding: 24px;
-  overflow-x: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .section-title {

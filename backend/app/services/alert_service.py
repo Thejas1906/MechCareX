@@ -99,6 +99,7 @@ class AlertService:
         self._active_by_machine[machine_code] = alert_id
         logger.info(f"Alert created: [{alert.severity}] {machine_code} → {alert.probable_fault}")
         asyncio.create_task(self._db_create(alert))
+        asyncio.create_task(self._auto_maintenance(alert))
         return alert
 
     def _maybe_resolve(self, machine_code: str):
@@ -152,6 +153,48 @@ class AlertService:
                     await db.commit()
         except Exception as e:
             logger.warning(f"Failed to update alert in DB: {e}")
+
+    async def _auto_maintenance(self, alert: "Alert"):
+        """Automatically create a maintenance record when an alert fires."""
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.models.machine import MaintenanceRecord
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                # Skip if an OPEN or IN_PROGRESS record already exists for this machine + fault
+                existing = await db.execute(
+                    select(MaintenanceRecord)
+                    .where(MaintenanceRecord.machine_code == alert.machine_code)
+                    .where(MaintenanceRecord.fault_type == alert.probable_fault)
+                    .where(MaintenanceRecord.status.in_(["OPEN", "IN_PROGRESS"]))
+                )
+                if existing.scalar_one_or_none():
+                    return
+                FAULT_ACTIONS = {
+                    "BEARING_DEGRADATION": "Inspect and lubricate bearings; replace if wear is confirmed",
+                    "IMBALANCE": "Balance rotating assembly; check for loose or missing components",
+                    "MISALIGNMENT": "Re-align shaft coupling; verify mounting and foundation",
+                    "OVERLOAD": "Reduce load or check driven equipment for mechanical jam",
+                    "OVERHEATING": "Check ventilation and cooling system; clean air filters",
+                    "RPM_ANOMALY": "Inspect drive system and speed control; check for belt slip",
+                    "ACOUSTIC_ANOMALY": "Perform acoustic inspection; tighten fasteners and check mounts",
+                    "UNKNOWN_ANOMALY": "Perform full diagnostic inspection across all subsystems",
+                }
+                priority = "CRITICAL" if alert.severity == "CRITICAL" else "HIGH" if alert.severity == "WARNING" else "MEDIUM"
+                rec = MaintenanceRecord(
+                    machine_code=alert.machine_code,
+                    machine_name=alert.machine_name,
+                    fault_type=alert.probable_fault,
+                    issue=alert.message,
+                    recommended_action=FAULT_ACTIONS.get(alert.probable_fault, "Perform diagnostic inspection"),
+                    priority=priority,
+                    status="OPEN",
+                )
+                db.add(rec)
+                await db.commit()
+                logger.info(f"Auto-maintenance record created: {alert.machine_code} → {alert.probable_fault}")
+        except Exception as e:
+            logger.warning(f"Failed to auto-create maintenance record: {e}")
 
     async def load_from_db(self):
         """
