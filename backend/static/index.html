@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RotaryGuard — Virtual Factory</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:     #00224D;
+      --pink:     #FF204E;
+      --crimson:  #A0153E;
+      --purple:   #5D0E41;
+      --surface:  #0a1628;
+      --card:     #0d1f3c;
+      --card2:    #121e35;
+      --border:   #1e3358;
+      --text:     #e8edf5;
+      --muted:    #8a9ab5;
+      --success:  #22c55e;
+      --warning:  #f59e0b;
+      --critical: #ef4444;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; background: var(--surface); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+
+    /* Header */
+    header {
+      background: var(--navy);
+      border-bottom: 2px solid var(--pink);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 32px; height: 32px; fill: var(--pink); }
+    .logo-text { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.08em; color: #fff; }
+    .logo-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 1.5rem; }
+    .sim-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--success);
+    }
+    .sim-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+    .ws-status { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Layout */
+    main { padding: 1.5rem 2rem 3rem; max-width: 1600px; margin: 0 auto; }
+
+    .page-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+
+    .machines-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 1200px) { .machines-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .machines-grid { grid-template-columns: 1fr; } main { padding: 1rem; } }
+
+    /* Machine Card */
+    .machine-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .machine-header {
+      background: var(--navy);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .machine-id { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; color: var(--pink); text-transform: uppercase; margin-bottom: 2px; }
+    .machine-name { font-size: 0.95rem; font-weight: 600; color: #fff; }
+    .machine-type { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .machine-location { font-size: 0.65rem; color: var(--muted); margin-top: 1px; }
+
+    .status-badge {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 3px;
+      display: flex; align-items: center; gap: 4px;
+      white-space: nowrap;
+    }
+    .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-RUNNING { background: rgba(34,197,94,0.12); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+    .status-RUNNING .dot { background: var(--success); animation: pulse 2s infinite; }
+    .status-WARNING { background: rgba(245,158,11,0.12); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+    .status-WARNING .dot { background: var(--warning); animation: pulse 1s infinite; }
+    .status-CRITICAL { background: rgba(239,68,68,0.12); color: var(--critical); border: 1px solid rgba(239,68,68,0.3); }
+    .status-CRITICAL .dot { background: var(--critical); animation: pulse 0.5s infinite; }
+    .status-FAULT { background: rgba(160,21,62,0.2); color: #ff6b8a; border: 1px solid rgba(160,21,62,0.4); }
+    .status-FAULT .dot { background: #ff6b8a; }
+
+    .machine-body { padding: 1.25rem; }
+
+    /* Sensors */
+    .section-label {
+      font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--muted); margin-bottom: 0.75rem; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sensors-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .sensor-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.65rem 0.75rem;
+    }
+    .sensor-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .sensor-value { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 600; color: #fff; }
+    .sensor-unit { font-size: 0.65rem; color: var(--muted); margin-left: 2px; font-family: var(--font-mono); }
+    .sensor-full { grid-column: 1 / -1; }
+
+    /* Health bar */
+    .health-bar-wrap { margin-bottom: 1.25rem; }
+    .health-bar-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; }
+    .health-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .health-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+    /* Active Fault */
+    .active-fault-banner {
+      background: rgba(160,21,62,0.12); border: 1px solid rgba(160,21,62,0.3);
+      border-radius: 5px; padding: 6px 10px; margin-bottom: 1.25rem;
+      font-size: 0.7rem; color: #ff8aaa; display: flex; align-items: center; gap: 6px;
+    }
+    .active-fault-banner.hidden { display: none; }
+    .fault-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); animation: pulse 0.8s infinite; }
+
+    /* Sliders */
+    .sliders-section { margin-bottom: 1.25rem; }
+
+    .slider-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .slider-label { font-size: 0.65rem; color: var(--muted); width: 90px; flex-shrink: 0; }
+    .slider-wrap { flex: 1; }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px; border-radius: 2px;
+      background: var(--border); outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--pink); cursor: pointer;
+      border: 2px solid var(--card);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--pink); cursor: pointer;
+      border: 2px solid var(--card);
+    }
+    .slider-val {
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text);
+      width: 32px; text-align: right; flex-shrink: 0;
+    }
+
+    /* Preset Buttons */
+    .presets-section { }
+    .presets-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
+    .preset-btn {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 6px 8px;
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer; transition: all 0.15s;
+      text-align: center;
+    }
+    .preset-btn:hover { border-color: var(--crimson); color: var(--text); background: rgba(160,21,62,0.1); }
+    .preset-btn.active { background: rgba(255,32,78,0.12); border-color: var(--pink); color: var(--pink); }
+    .preset-btn.normal-btn { border-color: rgba(34,197,94,0.3); color: var(--success); }
+    .preset-btn.normal-btn:hover, .preset-btn.normal-btn.active { background: rgba(34,197,94,0.1); border-color: var(--success); color: var(--success); }
+
+    /* Vibration signal indicators */
+    .vib-components { display: flex; gap: 0.5rem; margin-top: 6px; }
+    .vib-comp {
+      flex: 1; background: var(--card2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 5px 6px; text-align: center;
+    }
+    .vib-comp-label { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .vib-comp-val { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text); margin-top: 2px; }
+    .vib-comp-freq { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); }
+
+    /* Connection overlay */
+    #conn-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,22,40,0.97);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 999; gap: 1.5rem;
+    }
+    #conn-overlay.hidden { display: none; }
+    .conn-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--pink);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .conn-text { color: var(--muted); font-size: 0.85rem; letter-spacing: 0.08em; }
+
+    footer {
+      background: var(--navy);
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      font-size: 0.65rem; color: var(--muted);
+      display: flex; justify-content: space-between;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Connection overlay -->
+<div id="conn-overlay">
+  <div class="conn-spinner"></div>
+  <div class="conn-text">Connecting to simulation engine...</div>
+</div>
+
+<header>
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="14" stroke="#FF204E" stroke-width="2" fill="none"/>
+      <circle cx="16" cy="16" r="5" fill="#FF204E"/>
+      <line x1="16" y1="2" x2="16" y2="8" stroke="#FF204E" stroke-width="2"/>
+      <line x1="16" y1="24" x2="16" y2="30" stroke="#FF204E" stroke-width="2"/>
+      <line x1="2" y1="16" x2="8" y2="16" stroke="#FF204E" stroke-width="2"/>
+      <line x1="24" y1="16" x2="30" y2="16" stroke="#FF204E" stroke-width="2"/>
+      <line x1="5.86" y1="5.86" x2="10.1" y2="10.1" stroke="#A0153E" stroke-width="1.5"/>
+      <line x1="21.9" y1="21.9" x2="26.14" y2="26.14" stroke="#A0153E" stroke-width="1.5"/>
+      <line x1="26.14" y1="5.86" x2="21.9" y2="10.1" stroke="#A0153E" stroke-width="1.5"/>
+      <line x1="10.1" y1="21.9" x2="5.86" y2="26.14" stroke="#A0153E" stroke-width="1.5"/>
+    </svg>
+    <div>
+      <div class="logo-text">ROTARYGUARD</div>
+      <div class="logo-sub">Virtual Industrial Environment</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="ws-status" id="ws-status">● Connecting...</div>
+    <div class="sim-badge">
+      <div class="dot"></div>
+      <span>Simulation Running</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">Virtual Factory — Phase 1 Simulation Control Center &nbsp;/&nbsp; 3 machines online</div>
+  <div class="machines-grid" id="machines-grid"></div>
+</main>
+
+<footer>
+  <span>RotaryGuard v1.0 — Phase 1 Prototype &nbsp;|&nbsp; IoT-Based Predictive Maintenance</span>
+  <span id="last-update">Last update: —</span>
+</footer>
+
+<script>
+const API = 'http://localhost:8000';
+const WS_URL = 'ws://localhost:8000/ws';
+
+const MACHINES = [
+  { code: 'M01', name: 'Industrial Motor 01', type: 'Industrial Motor', location: 'Bay A — Station 1' },
+  { code: 'M02', name: 'Centrifugal Pump 02',  type: 'Centrifugal Pump',   location: 'Bay B — Station 2' },
+  { code: 'M03', name: 'Cooling Fan 03',       type: 'Cooling Fan',        location: 'Bay C — Station 3' },
+];
+
+const FAULT_PRESETS = [
+  { id: 'NORMAL',           label: 'Normal',           cls: 'normal-btn' },
+  { id: 'BEARING_FAILURE',  label: 'Bearing Failure',  cls: '' },
+  { id: 'IMBALANCE',        label: 'Imbalance',        cls: '' },
+  { id: 'MISALIGNMENT',     label: 'Misalignment',     cls: '' },
+  { id: 'OVERLOAD',         label: 'Overload',         cls: '' },
+  { id: 'OVERHEATING',      label: 'Overheating',      cls: '' },
+  { id: 'RPM_ANOMALY',      label: 'RPM Anomaly',      cls: '' },
+  { id: 'ACOUSTIC_ANOMALY', label: 'Acoustic Anomaly', cls: '' },
+];
+
+const SLIDER_DEFS = [
+  { key: 'temperature_fault', label: 'Temperature' },
+  { key: 'vibration_fault',   label: 'Vibration' },
+  { key: 'current_load',      label: 'Current Load' },
+  { key: 'rpm_variation',     label: 'RPM Variation' },
+  { key: 'acoustic_noise',    label: 'Acoustic Noise' },
+];
+
+// State per machine
+const state = {};
+MACHINES.forEach(m => {
+  state[m.code] = {
+    activeFault: 'NORMAL',
+    sliders: { temperature_fault: 0, vibration_fault: 0, current_load: 0, rpm_variation: 0, acoustic_noise: 0 },
+  };
+});
+
+// Render machine cards
+function buildUI() {
+  const grid = document.getElementById('machines-grid');
+  MACHINES.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'machine-card';
+    card.id = `card-${m.code}`;
+    card.innerHTML = `
+      <div class="machine-header">
+        <div>
+          <div class="machine-id">${m.code}</div>
+          <div class="machine-name">${m.name}</div>
+          <div class="machine-type">${m.type}</div>
+          <div class="machine-location">${m.location}</div>
+        </div>
+        <div>
+          <div class="status-badge status-RUNNING" id="status-${m.code}">
+            <div class="dot"></div><span>RUNNING</span>
+          </div>
+          <div style="font-size:0.65rem; color:#8a9ab5; margin-top:6px; text-align:right;">
+            Health: <span id="health-${m.code}" style="color:#e8edf5; font-family:monospace">100.0</span>%
+          </div>
+        </div>
+      </div>
+
+      <div class="machine-body">
+        <!-- Active fault banner -->
+        <div class="active-fault-banner hidden" id="fault-banner-${m.code}">
+          <div class="fault-dot"></div>
+          <span id="fault-banner-text-${m.code}">BEARING_FAILURE active</span>
+        </div>
+
+        <!-- Health bar -->
+        <div class="health-bar-wrap">
+          <div class="health-bar-labels"><span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Health Score</span><span id="health-pct-${m.code}" style="color:var(--muted);font-size:0.65rem">100%</span></div>
+          <div class="health-bar-track"><div class="health-bar-fill" id="health-bar-${m.code}" style="width:100%;background:var(--success)"></div></div>
+        </div>
+
+        <!-- Sensors -->
+        <div class="section-label">Live Telemetry</div>
+        <div class="sensors-grid">
+          <div class="sensor-item">
+            <div class="sensor-label">&#9651; Temperature</div>
+            <div><span class="sensor-value" id="temp-${m.code}">—</span><span class="sensor-unit">°C</span></div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-label">&#9651; Vibration RMS</div>
+            <div><span class="sensor-value" id="vib-${m.code}">—</span><span class="sensor-unit">g</span></div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-label">&#9651; Current</div>
+            <div><span class="sensor-value" id="curr-${m.code}">—</span><span class="sensor-unit">A</span></div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-label">&#9651; RPM</div>
+            <div><span class="sensor-value" id="rpm-${m.code}">—</span><span class="sensor-unit">rpm</span></div>
+          </div>
+          <div class="sensor-item sensor-full">
+            <div class="sensor-label">&#9651; Acoustic</div>
+            <div><span class="sensor-value" id="acou-${m.code}">—</span><span class="sensor-unit">dB</span></div>
+          </div>
+        </div>
+
+        <!-- Vibration harmonics -->
+        <div class="section-label">Vibration Harmonics</div>
+        <div class="vib-components">
+          <div class="vib-comp">
+            <div class="vib-comp-label">1× RPM</div>
+            <div class="vib-comp-val" id="v1x-${m.code}">—</div>
+            <div class="vib-comp-freq" id="f1x-${m.code}">— Hz</div>
+          </div>
+          <div class="vib-comp">
+            <div class="vib-comp-label">2× RPM</div>
+            <div class="vib-comp-val" id="v2x-${m.code}">—</div>
+            <div class="vib-comp-freq" id="f2x-${m.code}">— Hz</div>
+          </div>
+          <div class="vib-comp">
+            <div class="vib-comp-label">3× RPM</div>
+            <div class="vib-comp-val" id="v3x-${m.code}">—</div>
+            <div class="vib-comp-freq" id="f3x-${m.code}">— Hz</div>
+          </div>
+        </div>
+
+        <!-- Manual Sliders -->
+        <div class="section-label" style="margin-top:1.25rem">Fault Injection — Manual</div>
+        <div class="sliders-section" id="sliders-${m.code}">
+          ${SLIDER_DEFS.map(s => `
+            <div class="slider-row">
+              <div class="slider-label">${s.label}</div>
+              <div class="slider-wrap">
+                <input type="range" min="0" max="1" step="0.01" value="0"
+                  id="slider-${m.code}-${s.key}"
+                  oninput="onSlider('${m.code}','${s.key}',this.value)">
+              </div>
+              <div class="slider-val" id="sliderval-${m.code}-${s.key}">0.00</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Preset buttons -->
+        <div class="section-label">Fault Presets</div>
+        <div class="presets-section">
+          <div class="presets-grid">
+            ${FAULT_PRESETS.map(f => `
+              <button class="preset-btn ${f.cls}" id="preset-${m.code}-${f.id}"
+                onclick="activatePreset('${m.code}','${f.id}')">
+                ${f.label}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+      </div><!-- machine-body -->
+    `;
+    grid.appendChild(card);
+  });
+
+  // Mark NORMAL as active by default
+  MACHINES.forEach(m => {
+    document.getElementById(`preset-${m.code}-NORMAL`).classList.add('active');
+  });
+}
+
+// Slider debounce timers
+const sliderTimers = {};
+
+function onSlider(code, key, val) {
+  state[code].sliders[key] = parseFloat(val);
+  document.getElementById(`sliderval-${code}-${key}`).textContent = parseFloat(val).toFixed(2);
+
+  clearTimeout(sliderTimers[code]);
+  sliderTimers[code] = setTimeout(() => sendManualControls(code), 300);
+}
+
+async function sendManualControls(code) {
+  try {
+    await fetch(`${API}/api/simulation/machines/${code}/manual`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state[code].sliders),
+    });
+  } catch(e) { console.warn('Manual control error:', e); }
+}
+
+async function activatePreset(code, faultId) {
+  try {
+    if (faultId === 'NORMAL') {
+      await fetch(`${API}/api/simulation/machines/${code}/reset`, { method: 'POST' });
+      // Reset sliders
+      SLIDER_DEFS.forEach(s => {
+        document.getElementById(`slider-${code}-${s.key}`).value = 0;
+        document.getElementById(`sliderval-${code}-${s.key}`).textContent = '0.00';
+        state[code].sliders[s.key] = 0;
+      });
+    } else {
+      await fetch(`${API}/api/simulation/machines/${code}/fault`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fault_type: faultId, severity: 0.7 }),
+      });
+    }
+    state[code].activeFault = faultId;
+    updatePresetButtons(code, faultId);
+  } catch(e) { console.error('Preset error:', e); }
+}
+
+function updatePresetButtons(code, activeFault) {
+  FAULT_PRESETS.forEach(f => {
+    const btn = document.getElementById(`preset-${code}-${f.id}`);
+    btn.classList.toggle('active', f.id === activeFault);
+  });
+}
+
+// WebSocket data handler
+function handleMessage(data) {
+  const code = data.machine.id;
+  if (!code) return;
+
+  const s = data.sensors;
+  const sig = data.vibration_signal;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  set(`temp-${code}`,  s.temperature.toFixed(1));
+  set(`vib-${code}`,   s.vibration.toFixed(4));
+  set(`curr-${code}`,  s.current.toFixed(3));
+  set(`rpm-${code}`,   s.rpm.toFixed(0));
+  set(`acou-${code}`,  s.acoustic.toFixed(1));
+  set(`health-${code}`, data.health_score.toFixed(1));
+  set(`health-pct-${code}`, data.health_score.toFixed(0) + '%');
+
+  // Health bar
+  const bar = document.getElementById(`health-bar-${code}`);
+  if (bar) {
+    bar.style.width = data.health_score.toFixed(1) + '%';
+    bar.style.background = data.health_score > 75 ? 'var(--success)'
+                         : data.health_score > 50 ? 'var(--warning)'
+                         : 'var(--critical)';
+  }
+
+  // Status badge
+  const badge = document.getElementById(`status-${code}`);
+  if (badge) {
+    badge.className = `status-badge status-${data.status}`;
+    badge.innerHTML = `<div class="dot"></div><span>${data.status}</span>`;
+  }
+
+  // Active fault banner
+  const banner = document.getElementById(`fault-banner-${code}`);
+  const bannerText = document.getElementById(`fault-banner-text-${code}`);
+  if (banner && bannerText) {
+    if (data.active_faults && data.active_faults.length > 0) {
+      banner.classList.remove('hidden');
+      bannerText.textContent = data.active_faults.join(', ') + ' active';
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
+  // Vibration harmonics
+  if (sig && sig.components) {
+    set(`v1x-${code}`, sig.components['1x'].toFixed(4) + ' g');
+    set(`v2x-${code}`, sig.components['2x'].toFixed(4) + ' g');
+    set(`v3x-${code}`, sig.components['3x'].toFixed(4) + ' g');
+    if (sig.frequencies) {
+      set(`f1x-${code}`, sig.frequencies['1x'].toFixed(1) + ' Hz');
+      set(`f2x-${code}`, sig.frequencies['2x'].toFixed(1) + ' Hz');
+      set(`f3x-${code}`, sig.frequencies['3x'].toFixed(1) + ' Hz');
+    }
+  }
+
+  // Update last update timestamp
+  const ts = new Date(data.timestamp);
+  document.getElementById('last-update').textContent =
+    'Last update: ' + ts.toLocaleTimeString();
+}
+
+// WebSocket connection
+let ws, reconnectTimer;
+function connect() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    document.getElementById('conn-overlay').classList.add('hidden');
+    document.getElementById('ws-status').textContent = '● Connected';
+    document.getElementById('ws-status').style.color = 'var(--success)';
+    clearTimeout(reconnectTimer);
+  };
+
+  ws.onmessage = (ev) => {
+    try { handleMessage(JSON.parse(ev.data)); } catch(e) {}
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-status').textContent = '● Reconnecting...';
+    document.getElementById('ws-status').style.color = 'var(--warning)';
+    reconnectTimer = setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+buildUI();
+connect();
+</script>
+</body>
+</html>
